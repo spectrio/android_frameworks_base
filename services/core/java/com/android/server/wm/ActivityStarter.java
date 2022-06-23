@@ -103,6 +103,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
+import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -1243,6 +1244,15 @@ class ActivityStarter {
                 Slog.d(TAG, "Activity start allowed for important callingUid (" + callingUid + ")");
             }
             return false;
+        }
+
+        if (SystemProperties.getBoolean("persist.enplug.sys.allow.bg.st", false)) {
+            if (callingPackage.startsWith("com.enplug.")) {
+                if (DEBUG_ACTIVITY_STARTS) {
+                    Slog.d(TAG, "Activity start allowed for privileged Enplug app [" + callingPackage + "]");
+                }
+                return false;
+            }
         }
 
         // don't abort if the callingUid has a visible window or is a persistent system process
