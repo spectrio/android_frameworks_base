@@ -17,9 +17,12 @@ package com.android.server.hdmi;
 
 import android.hardware.hdmi.HdmiControlManager;
 import android.hardware.hdmi.HdmiPlaybackClient.OneTouchPlayCallback;
+import android.hardware.tv.cec.V1_0.SendMessageResult;
 import android.hardware.hdmi.IHdmiControlCallback;
 import android.os.RemoteException;
 import android.util.Slog;
+
+import com.android.server.hdmi.HdmiControlService.SendMessageCallback;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,9 +57,32 @@ final class OneTouchPlayAction extends HdmiCecFeatureAction {
 
     private int mPowerStatusCounter = 0;
 
+    private final SendMessageCallback mSendMessageCallback = new SendMessageCallback() {
+        @Override
+        public void onSendCompleted(int error) {
+            HdmiLogger.debug("OneTouchPlayAction.onSendCompleted  error= " + error + ", mState= " + mState);
+
+            if (error != SendMessageResult.SUCCESS) {
+                if (mState == STATE_WAITING_FOR_REPORT_POWER_STATUS) {
+                    /**
+                     * Send message failed.
+                     * invokeCallback(result) with result being negative error value of
+                     * SendMessageResult.{NACK, BUSY, FAIL}, effectively:
+                     * - SendMessageResult.NACK = -1
+                     * - SendMessageResult.BUSY = -2
+                     * - SendMessageResult.FAIL = -3
+                     */
+                    invokeCallback(-error);
+                    finish();
+                }
+            }
+        }
+    };
+
     // Factory method. Ensures arguments are valid.
     static OneTouchPlayAction create(HdmiCecLocalDeviceSource source,
             int targetAddress, IHdmiControlCallback callback) {
+        HdmiLogger.debug("OneTouchPlayAction.create targetAddress= " + targetAddress);        
         if (source == null || callback == null) {
             Slog.e(TAG, "Wrong arguments");
             return null;
@@ -75,6 +101,9 @@ final class OneTouchPlayAction extends HdmiCecFeatureAction {
     @Override
     boolean start() {
         sendCommand(HdmiCecMessageBuilder.buildTextViewOn(getSourceAddress(), mTargetAddress));
+        HdmiLogger.debug("OneTouchPlayAction.start");
+        sendCommand(HdmiCecMessageBuilder.buildTextViewOn(getSourceAddress(), mTargetAddress),
+                mSendMessageCallback);
         broadcastActiveSource();
         queryDevicePowerStatus();
         addTimer(mState, HdmiConfig.TIMEOUT_MS);
@@ -98,6 +127,7 @@ final class OneTouchPlayAction extends HdmiCecFeatureAction {
     }
 
     private void queryDevicePowerStatus() {
+        HdmiLogger.debug("OneTouchPlayAction.queryDevicePowerStatus");
         mState = STATE_WAITING_FOR_REPORT_POWER_STATUS;
         sendCommand(HdmiCecMessageBuilder.buildGiveDevicePowerStatus(getSourceAddress(),
                 mTargetAddress));
@@ -110,6 +140,7 @@ final class OneTouchPlayAction extends HdmiCecFeatureAction {
             return false;
         }
         if (cmd.getOpcode() == Constants.MESSAGE_REPORT_POWER_STATUS) {
+            HdmiLogger.debug("OneTouchPlayAction.processCommand for cmd= " + cmd);
             int status = cmd.getParams()[0];
             if (status == HdmiControlManager.POWER_STATUS_ON) {
                 broadcastActiveSource();
@@ -123,6 +154,7 @@ final class OneTouchPlayAction extends HdmiCecFeatureAction {
 
     @Override
     void handleTimerEvent(int state) {
+        HdmiLogger.debug("OneTouchPlayAction.handleTimerEvent for state= " + state + ", correntState= " + mState + ", mPowerStatusCounter= " + mPowerStatusCounter);
         if (mState != state) {
             return;
         }
@@ -139,15 +171,18 @@ final class OneTouchPlayAction extends HdmiCecFeatureAction {
     }
 
     public void addCallback(IHdmiControlCallback callback) {
+        HdmiLogger.debug("OneTouchPlayAction.addCallback mCallbacks.size= " + mCallbacks.size());
         mCallbacks.add(callback);
     }
 
     private void invokeCallback(int result) {
+        HdmiLogger.debug("OneTouchPlayAction.invokeCallback("+result+") mCallbacks.size= " + mCallbacks.size());
         try {
             for (IHdmiControlCallback callback : mCallbacks) {
                 callback.onComplete(result);
             }
         } catch (RemoteException e) {
+            HdmiLogger.error("OneTouchPlayAction.invokeCallback("+result+") failed:" + e);
             Slog.e(TAG, "Callback failed:" + e);
         }
     }

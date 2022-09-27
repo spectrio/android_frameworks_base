@@ -75,6 +75,7 @@ interface IHdmiControlService {
             boolean hasVendorId);
     void addVendorCommandListener(IHdmiVendorCommandListener listener, int deviceType);
     void sendStandby(int deviceType, int deviceId);
+    void setStandby(int deviceType, int deviceId, IHdmiControlCallback callback);
     void setHdmiRecordListener(IHdmiRecordListener callback);
     void startOneTouchRecord(int recorderAddress, in byte[] recordSource);
     void stopOneTouchRecord(int recorderAddress);

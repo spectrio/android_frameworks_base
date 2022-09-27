@@ -49,6 +49,23 @@ public final class HdmiPlaybackClient extends HdmiClient {
         public void onComplete(int result);
     }
 
+        /**
+     * Listener used by the client to get the result of send standby operation.
+     * @hide
+     */
+    public interface SendStandbyCallback {
+        /**
+         * Called when the result of the feature send standby is returned.
+         *
+         * @param result the result of the operation, being negative error value of
+         * SendMessageResult.{NACK, BUSY, FAIL}, effectively:
+         * - SendMessageResult.NACK = -1
+         * - SendMessageResult.BUSY = -2
+         * - SendMessageResult.FAIL = -3
+         */
+        public void onComplete(int result);
+    }
+
     /**
      * Listener used by the client to get display device status.
      */
@@ -122,6 +139,19 @@ public final class HdmiPlaybackClient extends HdmiClient {
         }
     }
 
+        /**
+     * Sends a &lt;Standby&gt; command to TV, return result in callback
+     * @param callback result of the operation.
+     * @hide
+     */
+    public void setStandby(SendStandbyCallback callback) {
+        try {
+            mService.setStandby(getDeviceType(), HdmiDeviceInfo.idForCecDevice(ADDR_TV), getCallbackWrapper(callback));
+        } catch (RemoteException e) {
+            Log.e(TAG, "sendStandby threw exception ", e);
+        }
+    }
+
     private IHdmiControlCallback getCallbackWrapper(final OneTouchPlayCallback callback) {
         return new IHdmiControlCallback.Stub() {
             @Override
@@ -132,6 +162,15 @@ public final class HdmiPlaybackClient extends HdmiClient {
     }
 
     private IHdmiControlCallback getCallbackWrapper(final DisplayStatusCallback callback) {
+        return new IHdmiControlCallback.Stub() {
+            @Override
+            public void onComplete(int status) {
+                callback.onComplete(status);
+            }
+        };
+    }
+
+    private IHdmiControlCallback getCallbackWrapper(final SendStandbyCallback callback) {
         return new IHdmiControlCallback.Stub() {
             @Override
             public void onComplete(int status) {

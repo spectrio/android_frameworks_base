@@ -381,10 +381,10 @@ final class HdmiCecKeycode {
             new KeycodeEntry(UNSUPPORTED_KEYCODE, CEC_KEYCODE_SELECT_AUDIO_INPUT_FUNCTION, false),
             // No Android keycode defined for CEC_KEYCODE_POWER_TOGGLE_FUNCTION
             new KeycodeEntry(UNSUPPORTED_KEYCODE, CEC_KEYCODE_POWER_TOGGLE_FUNCTION, false),
-            // No Android keycode defined for CEC_KEYCODE_POWER_OFF_FUNCTION
-            new KeycodeEntry(UNSUPPORTED_KEYCODE, CEC_KEYCODE_POWER_OFF_FUNCTION, false),
-            // No Android keycode defined for CEC_KEYCODE_POWER_ON_FUNCTION
-            new KeycodeEntry(UNSUPPORTED_KEYCODE, CEC_KEYCODE_POWER_ON_FUNCTION, false),
+            //
+            new KeycodeEntry(KeyEvent.KEYCODE_SLEEP, CEC_KEYCODE_POWER_OFF_FUNCTION, false),
+            //
+            new KeycodeEntry(KeyEvent.KEYCODE_WAKEUP, CEC_KEYCODE_POWER_ON_FUNCTION, false),
             // RESERVED
             new KeycodeEntry(KeyEvent.KEYCODE_PROG_BLUE, CEC_KEYCODE_F1_BLUE),
             new KeycodeEntry(KeyEvent.KEYCODE_PROG_RED, CEC_KEYCODE_F2_RED),

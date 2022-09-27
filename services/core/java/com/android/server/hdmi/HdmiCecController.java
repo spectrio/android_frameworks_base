@@ -625,6 +625,7 @@ final class HdmiCecController {
             final HdmiControlService.SendMessageCallback callback) {
         assertRunOnServiceThread();
         addCecMessageToHistory(false /* isReceived */, cecMessage);
+        HdmiLogger.debug("HdmiCecController.sendCecCommand cecMessage= " + cecMessage + ", callback= " + callback);
         runOnIoThread(new Runnable() {
             @Override
             public void run() {
@@ -640,9 +641,12 @@ final class HdmiCecController {
                     }
                 } while (i++ < HdmiConfig.RETRANSMISSION_COUNT);
 
+                HdmiLogger.debug("HdmiCecController.sendCecCommand nativeSendCecCommand result= " + errorCode);
+
                 final int finalError = errorCode;
                 if (finalError != SendMessageResult.SUCCESS) {
                     Slog.w(TAG, "Failed to send " + cecMessage + " with errorCode=" + finalError);
+                    HdmiLogger.warning("HdmiCecController.sendCecCommand nativeSendCecCommandF failed to send result= " + errorCode);
                 }
                 if (callback != null) {
                     runOnServiceThread(new Runnable() {

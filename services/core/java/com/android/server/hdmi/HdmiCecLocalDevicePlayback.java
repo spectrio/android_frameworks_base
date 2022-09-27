@@ -428,6 +428,27 @@ public class HdmiCecLocalDevicePlayback extends HdmiCecLocalDeviceSource {
 
     @Override
     @ServiceThreadOnly
+    protected void setStandby(int deviceId, IHdmiControlCallback callback) {
+        assertRunOnServiceThread();
+        List<StandbyAction> actions = getActions(StandbyAction.class);
+        if (!actions.isEmpty()) {
+            Slog.i(TAG, "setStandby already in progress");
+            HdmiLogger.debug("setStandby already in progress");
+            actions.get(0).addCallback(callback);
+            return;
+        }
+        StandbyAction action = StandbyAction.create(this, Constants.ADDR_TV, callback);
+        if (action == null) {
+            Slog.w(TAG, "Cannot initiate setStandby");
+            HdmiLogger.debug("Cannot initiate setStandby");
+            invokeCallback(callback, HdmiControlManager.RESULT_EXCEPTION);
+            return;
+        }
+        addAndStartAction(action);
+    }
+
+    @Override
+    @ServiceThreadOnly
     protected void disableDevice(boolean initiatedByCec, PendingActionClearedCallback callback) {
         super.disableDevice(initiatedByCec, callback);
 

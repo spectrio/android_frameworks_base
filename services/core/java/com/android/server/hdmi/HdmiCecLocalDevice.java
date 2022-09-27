@@ -699,6 +699,10 @@ abstract class HdmiCecLocalDevice {
         // Do nothing.
     }
 
+    protected void setStandby(int deviceId, IHdmiControlCallback callback) {
+        // Do nothing.
+    }
+
     protected boolean handleSetOsdName(HdmiCecMessage message) {
         // The default behavior of <Set Osd Name> is doing nothing.
         return true;
@@ -769,10 +773,12 @@ abstract class HdmiCecLocalDevice {
 
     @ServiceThreadOnly
     void addAndStartAction(final HdmiCecFeatureAction action) {
+        HdmiLogger.debug("HdmiCecLocalDevice.addAndStartAction action: " + action);
         assertRunOnServiceThread();
         mActions.add(action);
         if (mService.isPowerStandby() || !mService.isAddressAllocated()) {
             Slog.i(TAG, "Not ready to start action. Queued for deferred start:" + action);
+            HdmiLogger.debug("Not ready to start action. Queued for deferred start:" + action);
             return;
         }
         action.start();

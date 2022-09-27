@@ -20,8 +20,11 @@ import android.hardware.hdmi.HdmiControlManager;
 import android.hardware.hdmi.HdmiPlaybackClient;
 import android.hardware.hdmi.HdmiPlaybackClient.DisplayStatusCallback;
 import android.hardware.hdmi.IHdmiControlCallback;
+import android.hardware.tv.cec.V1_0.SendMessageResult;
 import android.os.RemoteException;
 import android.util.Slog;
+
+import com.android.server.hdmi.HdmiControlService.SendMessageCallback;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +44,28 @@ final class DevicePowerStatusAction extends HdmiCecFeatureAction {
 
     private final int mTargetAddress;
     private final List<IHdmiControlCallback> mCallbacks = new ArrayList<>();
+
+    private final SendMessageCallback mSendMessageCallback = new SendMessageCallback() {
+        @Override
+        public void onSendCompleted(int error) {
+            if (error != SendMessageResult.SUCCESS) {
+                if (mState == STATE_WAITING_FOR_REPORT_POWER_STATUS) {
+                    /**
+                     * Send message failed.
+                     * invokeCallback(result) with result being negative and decremented by 1
+                     * error value of SendMessageResult.{NACK, BUSY, FAIL}
+                     * Effectively:
+                     * - SendMessageResult.NACK = -2
+                     * - SendMessageResult.BUSY = -3
+                     * - SendMessageResult.FAIL = -4
+                     */
+                    invokeCallback(-(error + 1));
+                    finish();
+                }
+            }
+        }
+    };
+
 
     static DevicePowerStatusAction create(HdmiCecLocalDevice source,
             int targetAddress, IHdmiControlCallback callback) {
@@ -68,7 +93,7 @@ final class DevicePowerStatusAction extends HdmiCecFeatureAction {
 
     private void queryDevicePowerStatus() {
         sendCommand(HdmiCecMessageBuilder.buildGiveDevicePowerStatus(getSourceAddress(),
-                mTargetAddress));
+                mTargetAddress), mSendMessageCallback);
     }
 
     @Override

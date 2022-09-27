@@ -1121,6 +1121,7 @@ public class HdmiControlService extends SystemService {
     @ServiceThreadOnly
     void sendCecCommand(HdmiCecMessage command, @Nullable SendMessageCallback callback) {
         assertRunOnServiceThread();
+        HdmiLogger.debug("HdmiControlService.sendCecCommand command= " + command);
         if (mMessageValidator.isValid(command) == HdmiCecMessageValidator.OK) {
             mCecController.sendCommand(command, callback);
         } else {
@@ -2109,6 +2110,28 @@ public class HdmiControlService extends SystemService {
                         return;
                     }
                     device.sendStandby(deviceId);
+                }
+            });
+        }
+
+        @Override
+        public void setStandby(final int deviceType, final int deviceId, final IHdmiControlCallback callback) {
+            HdmiLogger.debug("HdmiControlService.setStandby deviceType= " + deviceType + ", deviceId= " + deviceId + ", callback= " + callback);
+            enforceAccessPermission();
+            runOnServiceThread(new Runnable() {
+                @Override
+                public void run() {
+                    HdmiMhlLocalDeviceStub mhlDevice = mMhlController.getLocalDeviceById(deviceId);
+                    if (mhlDevice != null) {
+                        mhlDevice.sendStandby();
+                        return;
+                    }
+                    HdmiCecLocalDevice device = mCecController.getLocalDevice(deviceType);
+                    if (device == null) {
+                        Slog.w(TAG, "Local device not available");
+                        return;
+                    }
+                    device.setStandby(deviceId, callback);
                 }
             });
         }

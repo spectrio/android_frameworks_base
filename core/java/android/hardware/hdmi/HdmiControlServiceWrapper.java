@@ -220,6 +220,11 @@ public final class HdmiControlServiceWrapper {
         }
 
         @Override
+        public void setStandby(int deviceType, int deviceId, IHdmiControlCallback callback) {
+            HdmiControlServiceWrapper.this.setStandby(deviceType, deviceId, callback);
+        }
+
+        @Override
         public void setHdmiRecordListener(IHdmiRecordListener callback) {
             HdmiControlServiceWrapper.this.setHdmiRecordListener(callback);
         }
@@ -420,7 +425,9 @@ public final class HdmiControlServiceWrapper {
 
     /** @hide */
     public void sendStandby(int deviceType, int deviceId) {}
-
+    
+    /** @hide */
+    public void setStandby(int deviceType, int deviceId, IHdmiControlCallback callback) {}
     /** @hide */
     public void setHdmiRecordListener(IHdmiRecordListener callback) {}
 
