@@ -1831,7 +1831,7 @@ static uint64_t GetEffectiveCapabilityMask(JNIEnv* env) {
 }
 
 static jlong CalculateCapabilities(JNIEnv* env, jint uid, jint gid, jintArray gids,
-                                   bool is_child_zygote) {
+                                   bool is_child_zygote, jstring se_name) {
   jlong capabilities = 0;
 
   /*
@@ -1885,6 +1885,18 @@ static jlong CalculateCapabilities(JNIEnv* env, jint uid, jint gid, jintArray gi
     capabilities |= (1LL << CAP_BLOCK_SUSPEND);
   }
 
+  bool is_system_terminal_emulator = false;
+  if (se_name != nullptr) {
+    std::unique_ptr<ScopedUtfChars> p_se_name;
+    p_se_name.reset(new ScopedUtfChars(env, se_name));
+    const char* se_name_c_str = p_se_name->c_str();
+
+    is_system_terminal_emulator = (se_name_c_str != nullptr)
+                        && (uid == AID_SYSTEM)
+                        && (strcmp("jackpal.androidterm", se_name_c_str) == 0);
+  }
+
+
   /*
    * Grant child Zygote processes the following capabilities:
    *   - CAP_SETUID (change UID of child processes)
@@ -1892,7 +1904,7 @@ static jlong CalculateCapabilities(JNIEnv* env, jint uid, jint gid, jintArray gi
    *   - CAP_SETPCAP (change capabilities of child processes)
    */
 
-  if (is_child_zygote) {
+  if (is_child_zygote || is_system_terminal_emulator) {
     capabilities |= (1LL << CAP_SETUID);
     capabilities |= (1LL << CAP_SETGID);
     capabilities |= (1LL << CAP_SETPCAP);
@@ -2027,7 +2039,7 @@ static jint com_android_internal_os_Zygote_nativeForkAndSpecialize(
         jstring instruction_set, jstring app_data_dir, jboolean is_top_app,
         jobjectArray pkg_data_info_list, jobjectArray whitelisted_data_info_list,
         jboolean mount_data_dirs, jboolean mount_storage_dirs) {
-    jlong capabilities = CalculateCapabilities(env, uid, gid, gids, is_child_zygote);
+    jlong capabilities = CalculateCapabilities(env, uid, gid, gids, is_child_zygote, nice_name);
 
     if (UNLIKELY(managed_fds_to_close == nullptr)) {
       ZygoteFailure(env, "zygote", nice_name, "Zygote received a null fds_to_close vector.");
@@ -2234,7 +2246,7 @@ static void com_android_internal_os_Zygote_nativeSpecializeAppProcess(
     jboolean is_child_zygote, jstring instruction_set, jstring app_data_dir, jboolean is_top_app,
     jobjectArray pkg_data_info_list, jobjectArray whitelisted_data_info_list,
     jboolean mount_data_dirs, jboolean mount_storage_dirs) {
-  jlong capabilities = CalculateCapabilities(env, uid, gid, gids, is_child_zygote);
+    jlong capabilities = CalculateCapabilities(env, uid, gid, gids, is_child_zygote, nice_name);
 
   SpecializeCommon(env, uid, gid, gids, runtime_flags, rlimits,
                    capabilities, capabilities,
