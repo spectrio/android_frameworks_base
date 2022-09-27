@@ -224,7 +224,19 @@ public class HdmiCecLocalDevicePlayback extends HdmiCecLocalDeviceSource {
     private ActiveWakeLock getWakeLock() {
         assertRunOnServiceThread();
         if (mWakeLock == null) {
-            if (SystemProperties.getBoolean(Constants.PROPERTY_KEEP_AWAKE, true)) {
+            if (SystemProperties.getBoolean("persist.enplug.hdmi.keep_awake.always", true)) {
+                // Create a dummy lock object that doesn't do anything about wake lock,
+                // hence don't allows the device to go to sleep regardless it's the active source.
+                mWakeLock = new ActiveWakeLock() {
+                    @Override
+                    public void acquire() { }
+                    @Override
+                    public void release() { }
+                    @Override
+                    public boolean isHeld() { return true; }
+                };
+                HdmiLogger.debug("Persistent wakelock always acquired");
+            } else if (SystemProperties.getBoolean(Constants.PROPERTY_KEEP_AWAKE, true)) {
                 mWakeLock = new SystemWakeLock();
             } else {
                 // Create a dummy lock object that doesn't do anything about wake lock,
