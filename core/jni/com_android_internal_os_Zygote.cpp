@@ -111,6 +111,7 @@ using android::base::StringAppendF;
 using android::base::StringPrintf;
 using android::base::WriteStringToFile;
 using android::base::GetBoolProperty;
+using android::base::GetProperty;
 
 #define CREATE_ERROR(...) StringPrintf("%s:%d: ", __FILE__, __LINE__). \
                               append(StringPrintf(__VA_ARGS__))
@@ -656,13 +657,15 @@ static void EnableKeepCapabilities(fail_fn_t fail_fn) {
 }
 
 static void DropCapabilitiesBoundingSet(fail_fn_t fail_fn) {
-  for (int i = 0; prctl(PR_CAPBSET_READ, i, 0, 0, 0) >= 0; i++) {;
-    if (prctl(PR_CAPBSET_DROP, i, 0, 0, 0) == -1) {
-      if (errno == EINVAL) {
-        ALOGE("prctl(PR_CAPBSET_DROP) failed with EINVAL. Please verify "
-              "your kernel is compiled with file capabilities support");
-      } else {
-        fail_fn(CREATE_ERROR("prctl(PR_CAPBSET_DROP, %d) failed: %s", i, strerror(errno)));
+  if ("user" == GetProperty("ro.build.type", "")) {
+    for (int i = 0; prctl(PR_CAPBSET_READ, i, 0, 0, 0) >= 0; i++) {;
+      if (prctl(PR_CAPBSET_DROP, i, 0, 0, 0) == -1) {
+        if (errno == EINVAL) {
+          ALOGE("prctl(PR_CAPBSET_DROP) failed with EINVAL. Please verify "
+          "your kernel is compiled with file capabilities support");
+        } else {
+          fail_fn(CREATE_ERROR("prctl(PR_CAPBSET_DROP, %d) failed: %s", i, strerror(errno)));
+        }
       }
     }
   }
