@@ -33,6 +33,7 @@ import android.content.Context;
 import android.content.IIntentReceiver;
 import android.content.IIntentSender;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.FeatureInfo;
@@ -279,6 +280,8 @@ class PackageManagerShellCommand extends ShellCommand {
                     return runGetMaxRunningUsers();
                 case "set-home-activity":
                     return runSetHomeActivity();
+                case "set-persistent-home-activity":
+                    return runSetPersistentHomeActivity();
                 case "set-installer":
                     return runSetInstaller();
                 case "get-instantapp-resolver":
@@ -2957,6 +2960,43 @@ class PackageManagerShellCommand extends ShellCommand {
         }
     }
 
+    private int runSetPersistentHomeActivity() {
+        final PrintWriter pw = getOutPrintWriter();
+        int userId = UserHandle.USER_SYSTEM;
+        String opt;
+        while ((opt = getNextOption()) != null) {
+            switch (opt) {
+                case "--user":
+                    userId = UserHandle.parseUserArg(getNextArgRequired());
+                    break;
+                default:
+                    pw.println("Error: Unknown option: " + opt);
+                    return 1;
+            }
+        }
+
+        String component = getNextArg();
+        ComponentName componentName =
+                component != null ? ComponentName.unflattenFromString(component) : null;
+
+        if (componentName == null) {
+            pw.println("Error: component name not specified or invalid");
+            return 1;
+        }
+
+        try {
+            IntentFilter intentFilter = new IntentFilter(Intent.ACTION_MAIN);
+            intentFilter.addCategory(Intent.CATEGORY_HOME);
+            intentFilter.addCategory(Intent.CATEGORY_DEFAULT);
+            mInterface.addPersistentPreferredActivity(intentFilter, componentName, userId);
+            pw.println("Success");
+            return 0;
+        } catch (Exception e) {
+            pw.println(e.toString());
+            return 1;
+        }
+    }
+
     private int runSetInstaller() throws RemoteException {
         final String targetPackage = getNextArg();
         final String installerPackageName = getNextArg();
@@ -3832,6 +3872,10 @@ class PackageManagerShellCommand extends ShellCommand {
         pw.println("    component (com.package.my/component.name). However, only the package name");
         pw.println("    matters: the actual component used will be determined automatically from");
         pw.println("    the package.");
+        pw.println("");
+        pw.println("  set-persistent-home-activity [--user USER_ID] TARGET-COMPONENT");
+        pw.println("    Set the default persistent home activity (aka launcher).");
+        pw.println("    Only for system user.");
         pw.println("");
         pw.println("  set-installer PACKAGE INSTALLER");
         pw.println("    Set installer package name");
